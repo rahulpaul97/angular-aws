@@ -1,0 +1,30 @@
+@use 'color-palette' as *;
+
+.header-container {
+    background-color: $primary-color-1;
+    height: 6vh;
+}
+
+.module-text {
+    color: $primary-color-2;
+    font-size: 1vw;
+    cursor: pointer;
+
+    &:hover {
+        color: $secondary-color-1;
+    }
+}
+
+.route-container {
+    height: 88vh;
+}
+
+.footer-container {
+    background-color: $primary-color-3;
+    height: 6vh;
+}
+
+.copyright-text {
+    color: $secondary-color-6;
+    font-size: 0.9vw;
+}

@@ -1,0 +1,23 @@
+@use 'bootstrap/scss/bootstrap' as *;
+@use 'color-palette' as *;
+
+.col-default-padding-dismiss {
+    padding-left: 0% !important;
+    padding-right: 0% !important;
+}
+
+.vertical-center {
+    display: flex;
+    align-items: center;
+}
+
+.horizontal-center {
+    display: flex;
+    justify-content: center;
+}
+
+.vertical-horizontal-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
