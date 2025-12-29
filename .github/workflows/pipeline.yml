@@ -41,6 +41,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }} # Private SSH key from secrets
           source: "dist/first-project/browser/**" # What to copy from runner
           target: "/home/${{ vars.EC2_USER }}/deploy" # Temp folder on EC2
+          strip_components: 3
 
       #  SSH into EC2 and deploy files to Nginx web root
       - name: Deploy & reload nginx
