@@ -3,61 +3,66 @@ name: Deploy Angular to EC2
 
 # Trigger: run this workflow on every push to main branch
 on:
-    push:
-        branches: [first-project]
+  push:
+    branches: [first-project]
 
 jobs:
-    deploy:
-        # Runner where the job will execute
-        runs-on: ubuntu-latest
+  deploy:
+    # Runner where the job will execute
+    runs-on: ubuntu-latest
 
-        steps:
-            # Checkout your GitHub repo code into the runner
-            - name: Checkout
-              uses: actions/checkout@v4
+    steps:
+      # Checkout your GitHub repo code into the runner
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            # Install Node.js (needed to build Angular)
-            - name: Setup Node
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22 # Use Node 24
-                  # cache: npm # Cache ~/.npm to speed up future runs
+      # Install Node.js (needed to build Angular)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22 # Use Node 24
+          # cache: npm # Cache ~/.npm to speed up future runs
 
-            #  Install exact dependencies from package-lock.json
-            - name: Install dependencies
-              run: npm install
+      #  Install exact dependencies from package-lock.json
+      - name: Install dependencies
+        run: npm install
 
-            #  Build Angular app in production mode
-            # Output goes to dist/<app-name>/
-            - name: Build Angular
-              run: npm run build
+      #  Build Angular app in production mode
+      # Output goes to dist/<app-name>/
+      - name: Build Angular
+        run: npm run build
 
-            #  Copy built files from runner → EC2 server using SCP over SSH
-            - name: Copy files to EC2
-              uses: appleboy/scp-action@v0.1.7
-              with:
-                  host: ${{ secrets.EC2_HOST }} # EC2 public IP / domain
-                  username: ${{ secrets.EC2_USER }} # Linux user on EC2 (e.g., ubuntu)
-                  key: ${{ secrets.EC2_SSH_KEY }} # Private SSH key from secrets
-                  source: "dist/first-project/browser/**" # What to copy from runner
-                  target: "/home/${{ secrets.EC2_USER }}/deploy" # Temp folder on EC2
+      - name: Debug secrets
+        run: |
+          echo "USER=${{ secrets.EC2_USER }}"
+          echo "HOST=${{ secrets.EC2_HOST }}"
 
-            #  SSH into EC2 and deploy files to Nginx web root
-            - name: Deploy & reload nginx
-              uses: appleboy/ssh-action@v1.0.3
-              with:
-                  host: ${{ secrets.EC2_HOST }}
-                  username: ${{ secrets.EC2_USER }}
-                  key: ${{ secrets.EC2_SSH_KEY }}
-                  script: |
-                      # Ensure temp deploy directory exists
-                      mkdir -p /home/${{ secrets.EC2_USER }}/deploy
+      #  Copy built files from runner → EC2 server using SCP over SSH
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }} # EC2 public IP / domain
+          username: ${{ secrets.EC2_USER }} # Linux user on EC2 (e.g., ubuntu)
+          key: ${{ secrets.EC2_SSH_KEY }} # Private SSH key from secrets
+          source: "dist/first-project/browser/**" # What to copy from runner
+          target: "/home/${{ secrets.EC2_USER }}/deploy" # Temp folder on EC2
 
-                      # Remove old files from Nginx root
-                      sudo rm -rf ${{ secrets.EC2_PATH }}/*
+      #  SSH into EC2 and deploy files to Nginx web root
+      - name: Deploy & reload nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Ensure temp deploy directory exists
+            mkdir -p /home/${{ secrets.EC2_USER }}/deploy
 
-                      # Copy new build files into Nginx root
-                      sudo cp -r /home/${{ secrets.EC2_USER }}/deploy/* ${{ secrets.EC2_PATH }}/
+            # Remove old files from Nginx root
+            sudo rm -rf ${{ secrets.EC2_PATH }}/*
 
-                      # Reload Nginx to serve new files (no downtime)
-                      sudo systemctl reload nginx
+            # Copy new build files into Nginx root
+            sudo cp -r /home/${{ secrets.EC2_USER }}/deploy/* ${{ secrets.EC2_PATH }}/
+
+            # Reload Nginx to serve new files (no downtime)
+            sudo systemctl reload nginx
