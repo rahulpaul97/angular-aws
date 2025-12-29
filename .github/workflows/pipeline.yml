@@ -60,5 +60,8 @@ jobs:
             # Copy new build files into Nginx root
             sudo cp -r /home/${{ vars.EC2_USER }}/deploy/* ${{ vars.EC2_PATH }}/
 
+            # Delete temp directory
+            sudo rm -rf /home/${{ vars.EC2_USER }}/deploy
+
             # Reload Nginx to serve new files (no downtime)
             sudo systemctl reload nginx
