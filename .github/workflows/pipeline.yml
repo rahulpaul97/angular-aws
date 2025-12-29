@@ -34,7 +34,7 @@ jobs:
 
       - name: Debug secrets
         run: |
-          echo "USER=${{ secrets.EC2_USER }}"
+          echo "EC2_SSH_KEY=${{ secrets.EC2_SSH_KEY }}"
           echo "HOST=${{ secrets.EC2_HOST }}"
 
       #  Copy built files from runner → EC2 server using SCP over SSH
