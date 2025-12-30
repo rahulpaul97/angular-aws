@@ -25,7 +25,7 @@ jobs:
 
       #  Install exact dependencies from package-lock.json
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       #  Build Angular app in production mode
       # Output goes to dist/<app-name>/
@@ -40,7 +40,7 @@ jobs:
           username: ${{ vars.EC2_USER }} # Linux user on EC2 (e.g., ubuntu)
           key: ${{ secrets.EC2_SSH_KEY }} # Private SSH key from secrets
           source: "dist/first-project/browser/**" # What to copy from runner
-          target: "/home/${{ vars.EC2_USER }}/deploy" # Temp folder on EC2
+          target: "/home/${{ vars.EC2_USER }}/deploy-first-app" # Temp folder on EC2
           strip_components: 3
 
       #  SSH into EC2 and deploy files to Nginx web root
@@ -52,16 +52,16 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Ensure temp deploy directory exists
-            mkdir -p /home/${{ vars.EC2_USER }}/deploy
+            mkdir -p /home/${{ vars.EC2_USER }}/deploy-first-app
 
             # Remove old files from Nginx root
-            sudo rm -rf ${{ vars.EC2_PATH }}/*
+            sudo rm -rf ${{ vars.EC2_PATH_FIRST_BRANCH }}/*
 
             # Copy new build files into Nginx root
-            sudo cp -r /home/${{ vars.EC2_USER }}/deploy/* ${{ vars.EC2_PATH }}/
+            sudo cp -r /home/${{ vars.EC2_USER }}/deploy-first-app/* ${{ vars.EC2_PATH_FIRST_BRANCH }}/
 
             # Delete temp directory
-            sudo rm -rf /home/${{ vars.EC2_USER }}/deploy
+            sudo rm -rf /home/${{ vars.EC2_USER }}/deploy-first-app
 
             # Reload Nginx to serve new files (no downtime)
             sudo systemctl reload nginx
