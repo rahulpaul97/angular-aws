@@ -14,19 +14,18 @@ FROM nginx:alpine
 
 RUN rm /etc/nginx/conf.d/default.conf
 
+COPY nginx.conf /etc/nginx/nginx.conf
 
-COPY nginx.conf /etc/nginx/conf.d/app.conf
-
+COPY app.conf /etc/nginx/conf.d/app.conf
 
 COPY --from=builder /app/dist/second-project/browser /usr/share/nginx/html
-
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
     && mkdir -p /var/cache/nginx /var/run/nginx \
     && chown -R appuser:appgroup \
-        /usr/share/nginx/html \
-        /var/cache/nginx \
-        /var/run/nginx
+    /usr/share/nginx/html \
+    /var/cache/nginx \
+    /var/run/nginx
 
 USER appuser
 
