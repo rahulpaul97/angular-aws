@@ -22,7 +22,11 @@ COPY --from=builder /app/dist/second-project/browser /usr/share/nginx/html
 
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup \
-    && chown -R appuser:appgroup /usr/share/nginx/html
+    && mkdir -p /var/cache/nginx /var/run/nginx \
+    && chown -R appuser:appgroup \
+        /usr/share/nginx/html \
+        /var/cache/nginx \
+        /var/run/nginx
 
 USER appuser
 
