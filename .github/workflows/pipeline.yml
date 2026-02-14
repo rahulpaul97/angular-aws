@@ -1,62 +1,51 @@
 name: Angular CI/CD to EC2
 
 on:
-    push:
-        branches: ["docker-tutorial"]
+  push:
+    branches: ["S3-deployment"]
 
 permissions:
-    id-token: write
-    contents: read
+  id-token: write
+  contents: read
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            #  OIDC Auth
-            - name: Configure AWS Credentials (OIDC)
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/Github-oidc-deploy-rule
-                  aws-region: ${{ vars.AWS_REGION }}
+        # Install Node.js (needed to build Angular)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22 # Use Node 24
+          # cache: npm # Cache ~/.npm to speed up future runs
 
-            #  Login to ECR
-            - name: Login to ECR
-              uses: aws-actions/amazon-ecr-login@v2
+      #  Install exact dependencies from package-lock.json
+      - name: Install dependencies
+        run: npm ci
 
-            #  Build Angular Docker Image
-            - name: Build Docker Image
-              run: |
-                  docker build -t angular-app:${{ github.sha }} .
+      #  Build Angular app in production mode
+      # Output goes to dist/<app-name>/
+      - name: Build Angular
+        run: npm run build
 
-            # Tag Image
-            - name: Tag Image
-              run: |
-                  ECR_URI="${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/${{ vars.ECR_REPO }}"
-                  docker tag angular-app:${{ github.sha }} $ECR_URI:${{ github.sha }}
-                  docker tag angular-app:${{ github.sha }} $ECR_URI:latest
-                  echo "ECR_URI=$ECR_URI" >> $GITHUB_ENV
+      #  OIDC Auth
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/Github-oidc-deploy-rule
+          aws-region: ${{ vars.AWS_REGION }}
 
-            #  Push to ECR
-            - name: Push Image to ECR
-              run: |
-                  docker push $ECR_URI:${{ github.sha }}
-                  docker push $ECR_URI:latest
+      - name: Deploy to S3
+        run: |
+          aws s3 sync dist/browser/ s3://angular-app-370835 \
+            --delete
 
-            #  Deploy via SSM
-            - name: Deploy on EC2 using SSM
-              run: |
-                  aws ssm send-command \
-                    --instance-ids "${{ vars.INSTANCE_ID }}" \
-                    --document-name "AWS-RunShellScript" \
-                    --comment "Deploy Angular container via GitHub OIDC " \
-                    --parameters commands='[
-                      "aws ecr get-login-password --region '${{ vars.AWS_REGION }}' | docker login --username AWS --password-stdin '${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com'",
-                      "docker pull '${ECR_URI}:latest'",
-                      "docker stop '${{ vars.CONTAINER_NAME }}' || true",
-                      "docker rm '${{ vars.CONTAINER_NAME }}' || true",
-                      "docker run -d -p '${{ vars.APP_PORT }}:80' --name '${{ vars.CONTAINER_NAME }}' --restart always '${ECR_URI}:latest'"
-                    ]'
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E13640NGLVQI5L \
+            --paths "/index.html"
